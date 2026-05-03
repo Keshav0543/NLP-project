@@ -63,19 +63,35 @@ def _extract_title(soup: BeautifulSoup) -> str:
     return "Product"
 
 
-# ✅ NEW: PRICE EXTRACTION
+# ✅ PRICE EXTRACTION (robust selectors + regex fallback)
 def _extract_price(soup: BeautifulSoup) -> str:
     selectors = [
-        "span.a-price-whole",
+        # Modern Amazon India selectors (2024+)
+        ".priceToPay span.a-price-whole",
+        "#corePriceDisplay_desktop_feature_div span.a-price-whole",
+        "#apex_offerDisplay_desktop span.a-price-whole",
+        ".a-price[data-a-size='xl'] .a-offscreen",
+        ".a-price[data-a-size='b'] .a-offscreen",
+        # Older / fallback selectors
         "span.a-offscreen",
+        "span.a-price-whole",
         "#priceblock_ourprice",
         "#priceblock_dealprice",
         "#priceblock_saleprice",
+        "#price_inside_buybox",
     ]
     for sel in selectors:
         tag = soup.select_one(sel)
         if tag:
-            return _clean_text(tag.get_text())
+            text = _clean_text(tag.get_text())
+            if text and any(ch.isdigit() for ch in text):
+                return text
+
+    # Last resort: regex scan for ₹ price in page text
+    match = re.search(r"₹[\d,]+", soup.get_text())
+    if match:
+        return match.group()
+
     return "Not found"
 
 

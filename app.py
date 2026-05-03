@@ -1,3 +1,4 @@
+import re
 from flask import Flask, render_template, request
 from scraper import scrape_product_reviews
 from nlp_utils import analyze_reviews
@@ -32,21 +33,46 @@ def index():
             # ✅ Step 2: Analyze reviews
             results = analyze_reviews(product_data)
 
-            # ✅ Step 3: Smart keyword extraction (FIXED INDENTATION)
-            title = results["title"].lower()
+            # ✅ Step 3: Smart keyword extraction — keep brand + model + key specs
+            title = results["title"]
+            title_lower = title.lower()
+            words = title.split()
+
             keywords = []
 
-            for word in title.split():
-                if any(x in word for x in ["lg", "samsung", "sony", "whirlpool"]):
-                    keywords.append(word)
-                if "l" in word or "litre" in word:
+            # Always keep brand name
+            for word in words:
+                if any(brand in word.lower() for brand in [
+                    "lg", "samsung", "sony", "whirlpool", "bosch", "haier",
+                    "godrej", "voltas", "carrier", "daikin", "panasonic",
+                    "apple", "oneplus", "realme", "xiaomi", "oppo", "vivo",
+                ]):
                     keywords.append(word)
 
-            # fallback
+            # Keep capacity / size tokens (e.g. 265L, 1.5ton, 55inch)
+            for word in words:
+                if re.search(r'\d+\.?\d*\s*(l|litre|liter|ton|kg|inch|gb|tb|mp)', word.lower()):
+                    keywords.append(word)
+
+            # Keep model numbers (mix of letters + digits)
+            for word in words:
+                if re.search(r'[a-zA-Z]+\d+|\d+[a-zA-Z]+', word):
+                    keywords.append(word)
+
+            # Deduplicate while preserving order
+            seen_kw = set()
+            unique_kw = []
+            for w in keywords:
+                if w.lower() not in seen_kw:
+                    seen_kw.add(w.lower())
+                    unique_kw.append(w)
+            keywords = unique_kw
+
+            # Fallback: use first 4 words of title
             if len(keywords) < 2:
-                keywords = title.split()[:3]
+                keywords = words[:4]
 
-            product_name = " ".join(keywords)
+            product_name = " ".join(keywords[:6])  # cap at 6 tokens
 
             # ✅ Step 4: Get Flipkart price
             flipkart_data = search_flipkart(product_name)
