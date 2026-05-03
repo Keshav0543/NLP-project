@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NLP Product Review Analyzer</title>
+    <link rel="stylesheet" href="../static/style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <section class="hero-card">
+        <div>
+          <span class="badge">NLP Project</span>
+          <h1>Amazon Product Review Analyzer</h1>
+          <p class="hero-text">
+            Paste an Amazon product URL to fetch review comments, detect
+            sentiment, summarize pros and cons, and get a smart buying
+            suggestion.
+          </p>
+        </div>
+        <div class="hero-points">
+          <div class="mini-card">Review Extraction</div>
+          <div class="mini-card">Sentiment Analysis</div>
+          <div class="mini-card">Pros &amp; Cons</div>
+          <div class="mini-card">Buy Recommendation</div>
+        </div>
+      </section>
+
+      <section class="form-card">
+        <form method="post" class="analyze-form">
+          <label for="url">Amazon Product URL</label>
+          <div class="input-row">
+            <input
+              id="url"
+              name="url"
+              placeholder="https://www.amazon.in/..."
+              value="{{ request.form.get('url','') }}"
+            />
+            <button type="submit">Analyze</button>
+          </div>
+          <p class="helper-text">
+            Tip: Use a direct Amazon product link that contains /dp/PRODUCTID
+          </p>
+        </form>
+      </section>
+
+      {% if error %}
+      <section class="message error-box">
+        <h3>Could not analyze this link</h3>
+        <p>{{ error }}</p>
+      </section>
+      {% endif %} {% if results %}
+      <section class="results-grid">
+        <div class="panel wide">
+          <div class="panel-header">
+            <div>
+              <p class="section-label">Product Summary</p>
+              <h2>{{ results.title }}</h2>
+              {% if results.rating %}
+              <p class="subtle">
+                Average rating detected: {{ results.rating }}
+              </p>
+              {% endif %}
+            </div>
+            <div class="verdict {{ results.verdict|lower|replace(' ', '-') }}">
+              {{ results.verdict }}
+            </div>
+          </div>
+          <p class="verdict-text">{{ results.verdict_reason }}</p>
+          <div class="link-group">
+            <a href="{{ results.product_url }}" target="_blank"
+              >Open Product Page</a
+            >
+            {% if results.review_url %}
+            <a href="{{ results.review_url }}" target="_blank"
+              >Open Review Page</a
+            >
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="panel stat-card">
+          <span>Total Reviews</span><strong>{{ results.total }}</strong>
+        </div>
+        <div class="panel stat-card">
+          <span>Positive</span><strong>{{ results.positive }}</strong>
+        </div>
+        <div class="panel stat-card">
+          <span>Negative</span><strong>{{ results.negative }}</strong>
+        </div>
+        <div class="panel stat-card">
+          <span>Neutral</span><strong>{{ results.neutral }}</strong>
+        </div>
+
+        <div class="panel">
+          <p class="section-label">Detected Pros</p>
+          <ul class="clean-list pros-list">
+            {% for item in results.pros %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="panel">
+          <p class="section-label">Detected Cons</p>
+          <ul class="clean-list cons-list">
+            {% for item in results.cons %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="panel wide">
+          <p class="section-label">Product Features</p>
+          {% if results.features %}
+          <div class="chip-wrap">
+            {% for item in results.features %}
+            <span class="chip">{{ item }}</span>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="subtle">No feature bullets were extracted from the page.</p>
+          {% endif %}
+        </div>
+
+        <div class="panel">
+          <p class="section-label">Top Keywords</p>
+          <div class="chip-wrap">
+            {% for k in results.keywords %}
+            <span class="chip keyword-chip">{{ k[0] }} • {{ k[1] }}</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="panel wide">
+          <p class="section-label">Fetched Review Comments</p>
+          <div class="review-list">
+            {% for review in results.sample %}
+            <article class="review-card {{ review.label|lower }}">
+              <div class="review-meta">
+                <span>{{ review.label }}</span>
+                <span>Score: {{ review.score }}</span>
+              </div>
+              <p>{{ review.text }}</p>
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="panel wide">
+          <p class="section-label">Price Comparison</p>
+          <ul class="clean-list">
+            {% for item in results.price_comparison %}
+            <li><strong>{{ item.platform }}</strong> : {{ item.price }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+      {% endif %}
+    </div>
+  </body>
+</html>
